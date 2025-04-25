@@ -115,6 +115,11 @@ Após gerar as chaves:
    ```bash
    ssh ubuntu@IP_PUBLICO_DA_VM
    ```
+6. Remover a infraestrutura:
+   ```bash
+   terraform destroy
+   ```
+  Confirme a criação digitando `yes` quando solicitado.   
 
 ## 🗑️ Destruindo a infraestrutura
 
