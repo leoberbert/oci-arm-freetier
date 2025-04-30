@@ -1,0 +1,379 @@
+#cloud-config
+write_files:
+  - path: /etc/security/limits.d/ubuntu.conf
+    content: |
+      ubuntu hard nofile 65535
+      ubuntu soft nofile 65535
+    permissions: '0644'
+    owner: root:root
+  - path: /etc/skel/.bashrc
+    content: |
+      case $- in
+          *i*) ;;  # Continue if interactive
+          *) return ;;  # Exit if not interactive
+      esac
+
+      if command -v dircolors > /dev/null; then
+          test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+          alias ls='ls --color=auto'
+          alias dir='dir --color=auto'
+          alias vdir='vdir --color=auto'
+          alias grep='grep --color=auto'
+          LS_COLORS+=':ow=01;33'
+      fi
+
+      alias ll='ls -l'   # Long listing format
+      alias la='ls -A'   # Show all entries except '.' and '..'
+      alias l='ls -CF'   # Classify entries and display directories with trailing slash
+
+      if [[ ! -f ~/.bash-normal ]] && [[ $TERM != linux ]]; then
+
+          if command -v pyenv >/dev/null; then
+              export PYENV_ROOT="$HOME/.pyenv"
+              export PATH="$PYENV_ROOT/bin:$PATH"
+              eval "$(pyenv init --path)"
+              eval "$(pyenv init -)"
+          fi
+          
+          if command -v grc-rs > /dev/null; then
+              GRC="grc-rs"
+              if tty -s && [ -n "$TERM" ] && [ "$TERM" != "dumb" ] && [ -n "$GRC" ]; then
+                  alias colourify="$GRC"
+                  commands=(
+                      ant blkid configure df diff dig dnf docker-machinels dockerimages dockerinfo
+                      dockernetwork dockerps dockerpull dockersearch dockerversion du fdisk
+                      findmnt go-test ifconfig iostat_sar ip ipaddr ipneighbor iproute iptables
+                      irclog iwconfig kubectl last ldap lolcat lsattr lsblk lsmod lsof lspci
+                      lsusb mount mtr mvn netstat nmap ntpdate ping ping2 proftpd pv
+                      semanageboolean semanagefcontext semanageuser sensors showmount sockstat
+                      ss stat sysctl tcpdump traceroute tune2fs ulimit uptime vmstat wdiff yaml
+                  )
+                  for cmd in "${commands[@]}"; do
+                      if command -v "$cmd" >/dev/null; then
+                          alias "$cmd"="colourify $cmd"
+                      fi
+                  done
+                  unset commands cmd
+              fi
+              export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+          fi
+          if command -v batcat > /dev/null; then
+              cat() {
+                  local use_cat=false
+                  for arg in "$@"; do
+                      if [[ "$arg" =~ ^-[vet]+$ ]]; then
+                          use_cat=true
+                          break
+                      fi
+                  done
+                  if [ "$use_cat" == true ]; then
+                      command cat "$@"
+                  else
+                      batcat --paging=never --style=plain "$@"
+                  fi
+              }
+              help() {
+                  if [ $# -eq 0 ]; then
+                      command help
+                  else
+                      "$@" --help 2>&1 | batcat --paging=never --style=plain --language=help
+                  fi
+              }
+          fi
+          
+      fi
+      HISTCONTROL=ignoreboth
+      shopt -s histappend
+      HISTSIZE=1000
+      HISTFILESIZE=2000
+      shopt -s checkwinsize
+
+      if [ -f ~/.bash_aliases ]; then
+          . ~/.bash_aliases
+      fi
+      if command -v fzf > /dev/null; then
+          eval "$(fzf --bash)"
+          fif() {
+          if [ ! "$#" -gt 0 ]; then echo "Need a string to search for!"; return 1; fi
+          fzf --preview "highlight -O ansi -l {} 2> /dev/null | rga --ignore-case --pretty --context 10 '$1' {}" < <(rga --files-with-matches --no-messages "$1")
+          }
+      fi
+      if [[ ${BLE_VERSION-} ]]; then
+          if grep -q -m1 _ble_decode_hook ~/.cache/blesh/*/decode.bind.*.bind 2>/dev/null; then _bleCacheVersion=new; else _bleCacheVersion=old; fi
+          if grep -q -m1 _ble_decode_hook /usr/share/blesh/lib/init-bind.sh 2>/dev/null; then _bleInstalledVersion=new; else _bleInstalledVersion=old; fi
+          [[ $_bleInstalledVersion != $_bleCacheVersion ]] && rm ~/.cache/blesh/*/[dk]*
+          ble-attach
+          if [ -f /usr/share/fzf/key-bindings.bash ]; then
+              _ble_contrib_fzf_base=/usr/share/fzf/
+          fi
+      else
+          PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+      fi
+    permissions: '0644'
+    owner: root:root
+  - path: /etc/skel/.blerc
+    content: |
+      # -*- mode: sh; mode: sh-bash -*-
+      bleopt history_lazyload=1
+      blueBg="\[\e[44m\]"
+      blueFg="\[\e[34m\]"
+      blue2Fg="\e[38;5;31m\]"
+      blackFg="\[\e[30m\]"
+      whiteFg="\[\e[37m\]"
+      fmtReset="\[\e[0m\]"
+      systemBg="\[\e[48;5;237m\]"
+      systemFg="\[\e[38;5;237m\]"
+      nameBg="\[\e[48;5;248m\]"
+      nameFg="\[\e[38;5;248m\]"
+      redFg="\[\e[38;5;203;48;5;238m\]"
+      greenFg="\[\033[032m\]"
+      yellowFg="\[\033[033m\]"
+      blueFg="\[\e[38;5;75m\]"
+      gitBg="\[\e[48;5;238m\]"
+      gitFg="\[\e[38;5;238m\]"
+      virtualEnvBg="\[\e[48;5;239m\]"
+      virtualEnvFg="\[\e[38;5;239m\]"
+      yellowFg="\[\033[33m\]"
+      purpleFg="\[\033[035m\]"
+      cyanFg="\[\033[0;36m\]"
+      reset="\[\033[0m\]"
+      gitBranchIcon=""
+      gitModifiedIcon=""
+      gitUntrackedIcon=""
+      gitStagedIcon=""
+
+      gitInfo() {
+        git rev-parse --is-inside-work-tree &>/dev/null || return
+        branch=$(git symbolic-ref --short HEAD 2>/dev/null || git describe --tags --exact-match 2>/dev/null)
+        
+        if [ -n "$branch" ]; then
+          status=$(git status --porcelain=v2 2>/dev/null)
+          staged=$(echo "$status" | grep "^1 .M" | wc -l)
+          modified=$(echo "$status" | grep "^1 M" | wc -l)
+          untracked=$(echo "$status" | grep "^? " | wc -l)
+          gitPrompt="$reset $gitFg $gitBg$blueFg $gitBranchIcon \[\e[38;5;254m\]$branch"
+          [ $staged -gt 0 ] && gitPrompt+=" $gitBg$greenFg $gitStagedIcon \[\e[38;5;254m\]$staged"
+          [ $modified -gt 0 ] && gitPrompt+=" $gitBg$yellowFg $gitModifiedIcon \[\e[38;5;254m\]$modified"
+          [ $untracked -gt 0 ] && gitPrompt+=" $gitBg$redFg $gitUntrackedIcon \[\e[38;5;254m\]$untracked"
+          gitPrompt+=" $reset$gitFg$reset"
+
+          echo -e "$gitPrompt"
+        fi
+      }
+      setPrompt() {
+        local gitPrompt
+        gitPrompt=$(gitInfo)
+
+        if [[ -n $VIRTUAL_ENV ]]; then
+          ps1_virtual_env="$reset $virtualEnvFg $virtualEnvBg$yellowFg  \[\e[38;5;254m\]$VIRTUAL_ENV $reset$virtualEnvFg$reset"
+        else
+          unset ps1_virtual_env
+        fi
+
+        PS1="$blue2Fg╭─\[\e[38;5;31m\]\[\e[97;48;5;31m\] \[\e[38;5;31;48;5;24m\]\[\e[97m\] \u \[\e[38;5;24;48;5;238m\]\[\e[38;5;254m\] \w \[\e[0;38;5;238m\]$gitBg$gitPrompt$ps1_virtual_env$reset \[\e[38;5;245m\] \t\[\e[0m\]\n$blue2Fg╰─ ❯ "
+      }
+
+      PROMPT_COMMAND=setPrompt
+      ble/function#advice around ble/prompt/update 'prompt_unit="" ble/function#advice/do'
+      bleopt prompt_eol_mark=""
+      bleopt exec_errexit_mark=$'\e[91m[exit=%d]\e[m'
+      bleopt line_limit_length=300
+      bleopt grapheme_cluster=extended
+      bleopt complete_ambiguous=
+      bleopt complete_auto_delay=150
+      bleopt complete_menu_complete_opts=
+
+      # bleopt menu_align_min=4
+      bleopt menu_align_max=150
+      bleopt filename_ls_colors="$LS_COLORS"
+      #bleopt highlight_syntax=
+      bleopt highlight_filename=
+      #bleopt highlight_variable=
+      bleopt highlight_timeout_sync=50
+      bleopt highlight_timeout_async=1000
+      bleopt syntax_eval_polling_interval=50
+      ble-face -s filename_directory        underline,fg=blue
+      ble-face -s command_builtin           bold,fg=green
+      ble-face -s syntax_command           fg=green
+
+      ble-face -s syntax_error              fg=red
+      ble-face -s auto_complete             fg=242
+      ble-face -s varname_unset             fg=yellow
+      ble-face -s command_function          fg=orange # fg=purple
+
+      function blerc/emacs-load-hook {
+        bleopt keymap_emacs_mode_string_multiline=$'\e[1m-- Press Ctrl + J to execute or Ctrl + C to cancel --\e[m'
+        return 0
+      }
+      blehook/eval-after-load keymap_emacs blerc/emacs-load-hook
+
+    permissions: '0644'
+    owner: root:root    
+  - path: /etc/skel/.bash_profile
+    content: |
+      bash
+    permissions: '0644'
+    owner: root:root
+  - path: /etc/vim/vimrc
+    content: |
+      syntax on
+      filetype plugin indent on
+
+      " Search and encoding settings
+
+      set noincsearch                        " Disables incremental search; matches are only highlighted after pressing Enter
+      set ignorecase                         " Ignores case in search patterns for easier matching
+      set encoding=utf8                      " Sets file encoding to UTF-8 for better compatibility
+      set laststatus=2                       " Always displays the status line at the bottom of the screen
+      set hlsearch                           " Highlights all matches for search results to improve visibility
+      set showmatch                          " Briefly highlights matching parentheses, brackets, or braces
+      set cursorline                         " Highlights the entire line where the cursor is positioned for better focus
+      set nocompatible                       " Ensures Vim is not in Vi mode
+
+      "Color Scheme
+      "colorscheme codedark
+      colorscheme zaibatsu
+
+      " Enables mouse support if available
+      if has("mouse")
+          set mouse=v
+      endif
+
+
+      " Configures indentation settings specifically for HTML files
+      function HtmlConfig()
+              set tabstop=2 softtabstop=2 expandtab shiftwidth=2
+              " Sets tab, soft tab, and indentation width to 2 spaces for HTML files
+      endfunction
+
+      " Configures indentation settings specifically for Python files
+      function PythonConfig()
+              set tabstop=4 softtabstop=4 expandtab shiftwidth=4
+              " Sets tab, soft tab, and indentation width to 4 spaces for Python files
+      endfunction
+
+      " Configures indentation settings specifically for YAML files
+      function YamlConfig()
+              set tabstop=2 softtabstop=2 expandtab shiftwidth=2 indentkeys-=0# indentkeys-=<:>
+              " Sets tab, soft tab, and indentation width to 2 spaces for YAML files,
+              " with custom indent keys
+      endfunction
+
+      " Autocommands for automatic behavior
+      autocmd CursorHoldI * stopinsert       " Exits Insert mode if cursor is idle for updatetime duration
+      autocmd FileType html call HtmlConfig()   " Applies HtmlConfig() for HTML files
+      autocmd FileType python call PythonConfig() " Applies PythonConfig() for Python files
+      autocmd FileType yaml,yml call YamlConfig() " Applies YamlConfig() for YAML files
+
+      " Status line configuration to show paste mode status, file information, working directory, 
+      " and cursor position details
+      set statusline=\ File:\ %F%m%r%h\ %w\ \ Working\ Directory:\ %r%{getcwd()}%h\ -\ Line:\ %l\ -\ Column:\ %c
+      " Prevents defaults.vim from overwriting these settings
+      let g:skip_defaults_vim = 1
+  
+    permissions: '0644'
+    owner: root:root
+  - path: /etc/sysctl.conf
+    content: |
+      fs.file-max = 2097152
+      net.ipv6.conf.all.disable_ipv6 = 1
+      net.ipv6.conf.default.disable_ipv6 = 1
+      net.ipv6.conf.lo.disable_ipv6 = 1
+      kernel.msgmax = 65536
+      kernel.msgmnb = 65536
+      kernel.panic = 3
+      kernel.printk = 4 4 1 7
+      kernel.sysrq = 0
+      net.core.default_qdisc = fq_codel
+      net.core.somaxconn = 65535
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.default.accept_redirects = 0
+      net.ipv4.conf.all.secure_redirects = 0
+      net.ipv4.conf.default.secure_redirects = 0
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv4.conf.all.arp_ignore = 1
+      net.ipv4.conf.all.log_martians = 1
+      net.ipv4.conf.all.rp_filter = 1
+      net.ipv4.conf.default.rp_filter = 1
+      net.ipv4.conf.all.send_redirects = 0
+      net.ipv4.conf.default.arp_ignore = 1
+      net.ipv4.conf.default.log_martians = 1
+      net.ipv4.icmp_echo_ignore_all = 1
+      net.ipv4.icmp_echo_ignore_broadcasts = 1
+      net.ipv4.icmp_ignore_bogus_error_responses = 1
+      net.ipv4.ip_default_ttl = 77
+      net.ipv4.ip_forward = 1
+      net.ipv4.ip_local_port_range = 1024 65535
+      net.ipv4.ip_no_pmtu_disc = 1
+      net.core.rmem_default = 1048576
+      net.core.rmem_max = 16777216
+      net.core.wmem_default = 1048576
+      net.core.wmem_max = 16777216
+      net.core.optmem_max = 65536
+      net.ipv4.tcp_rmem = 4096 1048576 2097152
+      net.ipv4.tcp_wmem = 4096 65536 16777216
+      net.ipv4.udp_rmem_min = 16384
+      net.ipv4.udp_wmem_min = 16384
+      net.core.netdev_max_backlog = 16384
+      net.ipv4.tcp_congestion_control = bbr
+      net.ipv4.tcp_dsack = 1
+      net.ipv4.tcp_ecn = 0
+      net.ipv4.tcp_fack = 1
+      net.ipv4.tcp_fin_timeout = 10
+      net.ipv4.tcp_keepalive_intvl = 10
+      net.ipv4.tcp_keepalive_probes = 6
+      net.ipv4.tcp_keepalive_time = 60
+      net.ipv4.tcp_max_syn_backlog = 16384
+      net.ipv4.tcp_no_metrics_save = 1
+      net.ipv4.tcp_rfc1337 = 1
+      net.ipv4.tcp_sack = 1
+      net.ipv4.tcp_slow_start_after_idle = 0
+      net.ipv4.tcp_syn_retries = 2
+      net.ipv4.tcp_synack_retries = 2
+      net.ipv4.tcp_syncookies = 1
+      net.ipv4.tcp_timestamps = 1
+      net.ipv4.tcp_tw_reuse = 1
+      net.ipv4.tcp_window_scaling = 1
+      net.ipv4.tcp_fastopen = 3
+      net.ipv4.tcp_low_latency = 1
+      net.ipv4.tcp_max_tw_buckets = 2000000
+      net.ipv4.tcp_mtu_probing = 1
+      net.netfilter.nf_conntrack_acct = 1
+      net.netfilter.nf_conntrack_checksum = 1
+      net.netfilter.nf_conntrack_timestamp = 1
+      net.netfilter.nf_conntrack_tcp_loose = 0
+      net.netfilter.nf_conntrack_buckets = 16384
+      net.netfilter.nf_conntrack_expect_max = 64
+      net.netfilter.nf_conntrack_max = 200000
+      net.netfilter.nf_conntrack_tcp_timeout_established = 1800
+      net.netfilter.nf_conntrack_tcp_timeout_close = 10
+      net.netfilter.nf_conntrack_tcp_timeout_close_wait = 10
+      net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 10
+      net.netfilter.nf_conntrack_tcp_timeout_last_ack = 10
+      net.netfilter.nf_conntrack_tcp_timeout_time_wait = 10
+      net.netfilter.nf_conntrack_tcp_timeout_syn_recv = 5
+      net.netfilter.nf_conntrack_tcp_timeout_syn_sent = 5
+      net.netfilter.nf_conntrack_udp_timeout = 10
+      net.netfilter.nf_conntrack_udp_timeout_stream = 180
+      vm.dirty_background_ratio = 5
+      vm.dirty_ratio = 15
+      vm.vfs_cache_pressure = 50
+      vm.swappiness = 10
+
+    permissions: '0644'
+    owner: root:root
+runcmd:
+  - apt-get update
+  - apt-get install -y bat docker-compose htop vim git curl wget unzip btrfs-progs net-tools iotop
+  - apt-get remove -y snapd
+  - apt-get clean
+  - apt-get autoremove -y
+  - wget https://github.com/junegunn/fzf/releases/download/v0.61.3/fzf-0.61.3-linux_arm64.tar.gz -O /tmp/fzf.tar.gz
+  - tar -xzf /tmp/fzf.tar.gz -C /usr/bin
+  - chmod +x /usr/bin/fzf
+  - sysctl -p /etc/sysctl.conf
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker ubuntu
+  - chmod 666 /var/run/docker.sock
+  - systemctl daemon-reload
